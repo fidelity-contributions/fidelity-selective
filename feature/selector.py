@@ -26,6 +26,7 @@ from xgboost import XGBClassifier, XGBRegressor
 from feature.base import _BaseDispatcher, _BaseSupervisedSelector, _BaseUnsupervisedSelector
 from feature.correlation import _Correlation
 from feature.linear import _Linear
+from feature.kl_divergence import _KL_Divergence
 from feature.statistical import _Statistical
 from feature.text_based import _TextBased
 from feature.tree_based import _TreeBased
@@ -166,6 +167,28 @@ class SelectionMethod(NamedTuple):
             check_true(isinstance(self.alpha, (int, float)), TypeError("Alpha must a number."))
             check_true(self.alpha >= 0, ValueError("Alpha cannot be negative"))
 
+    class KL_Divergence(NamedTuple):
+        """
+
+        Computes the distribution of a given feature for instances where label == 1 and label == 0.
+        Uses KL divergence between the two distributions as an importance score,
+        where a higher value indicates greater discriminative power of the feature
+        with respect to the binary label.
+
+        Attributes
+        ----------
+        num_features: Num, optional
+            If integer, select top num_features.
+            If float, select the top num_features percentile.
+        """
+        num_features: Num = 0.0
+
+        def _validate(self):
+            check_true(isinstance(self.num_features, (int, float)), TypeError("Num features must a number."))
+            check_true(self.num_features > 0, ValueError("Num features must be greater than zero."))
+            if isinstance(self.num_features, float):
+                check_true(self.num_features <= 1, ValueError("Num features ratio must be between [0..1]."))
+    
     class Statistical(NamedTuple):
         """
         Supervised feature selector based on statistical tests.
@@ -480,6 +503,7 @@ class Selective:
 
     def __init__(self, selection_method: Union[SelectionMethod.Correlation,
                                                SelectionMethod.Linear,
+                                               SelectionMethod.KL_Divergence,
                                                SelectionMethod.TreeBased,
                                                SelectionMethod.TextBased,
                                                SelectionMethod.Statistical,
@@ -521,6 +545,9 @@ class Selective:
         self._imp: Union[None, _BaseUnsupervisedSelector, _BaseSupervisedSelector] = None
         if isinstance(selection_method, SelectionMethod.Correlation):
             self._imp = _Correlation(self.seed, self.selection_method.threshold, self.selection_method.method)
+
+        elif isinstance(selection_method, SelectionMethod.KL_Divergence):
+            self._imp = _KL_Divergence(self.seed, self.selection_method.num_features)
         elif isinstance(selection_method, SelectionMethod.Linear):
             self._imp = _Linear(self.seed, self.selection_method.num_features,
                                 self.selection_method.regularization, self.selection_method.alpha)
@@ -593,6 +620,7 @@ class Selective:
         # Selection Method type
         check_true(isinstance(selection_method, (SelectionMethod.Correlation,
                                                  SelectionMethod.Linear,
+                                                 SelectionMethod.KL_Divergence,
                                                  SelectionMethod.TextBased,
                                                  SelectionMethod.TreeBased,
                                                  SelectionMethod.Statistical,

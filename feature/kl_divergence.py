@@ -7,61 +7,51 @@ from typing import NoReturn, Tuple
 import pandas as pd
 import numpy as np
 
-from scipy.special import kl_div, rel_entr
-from feature.base import _BaseSupervisedSelector, _BaseDispatcher
-from feature.utils import Num, get_task_string, check_true
+from scipy.special import rel_entr
+from feature.base import _BaseSupervisedSelector
+from feature.utils import Num, check_true
 
 
-from tqdm import tqdm
+class _KL_Divergence(_BaseSupervisedSelector):
 
-
-class _KL_Divergence(_BaseSupervisedSelector, _BaseDispatcher):
-
-    def __init__(self, seed: int, num_features: Num,):
+    def __init__(self, seed: int, num_features: Num, num_bins: Num = 100):
         super().__init__(seed)
 
         self.num_features = num_features  # this could be int or float
+        self.num_bins = num_bins
 
-        # Implementor is decided when data becomes available in fit()
-        self.imp = None
+    def fit(self, X: pd.DataFrame, y: pd.Series) -> NoReturn:
 
-    def get_model_args(self, selection_method) -> Tuple:
-
-        # Pack model argument
-        return selection_method.num_features
-
-    def dispatch_model(self, labels: pd.Series, *args):
-
-        # Unpack model argument
-        num_features = args[0]
-        self.num_features = num_features
+        check_true(len(np.unique(y)) == 2, TypeError("Only binary labels are supported for KL Divergence"))
         
+        kl_mat = np.zeros((self.num_features, 1))
+        X = X.values
+        label_categories = np.unique(y)
 
-    def fit(self, data: pd.DataFrame, labels: pd.Series) -> NoReturn:
-
-        check_true(len(np.unique(labels)) == 2, TypeError("Only binary labels are supported for KL Divergence"))
+        class_one_idx = np.where(y == label_categories[0])[0]
+        class_two_idx = np.where(y == label_categories[1])[0]
         
-        kl_mat = np.zeros((data.shape[1], 1))
-        data = data.values
-        label_categories = np.unique(labels)
-        
-        for i in tqdm(range(data.shape[1])):
+        for i in range(self.num_features):
             
-            pos_idx = np.where(labels == label_categories[0])[0]
-            neg_idx = np.where(labels == label_categories[1])[0]
-            
-            f1 = np.histogram(data[pos_idx, i], bins = 100)[0]
-            f2 = np.histogram(data[neg_idx, i], bins = 100)[0]
+            f1 = np.histogram(X[class_one_idx, i], bins = self.num_bins)[0]
+            f2 = np.histogram(X[class_two_idx, i], bins = self.num_bins)[0]
         
             f1 = f1 / np.sum(f1)
             f2 = f2 / np.sum(f2)
         
+            # KL Divergence is not symmetric, so we calculate divergence in both directions 
             kl = rel_entr(f1, f2)
-            kl[kl == np.inf] = 0
+            kl_reversed = rel_entr(f2, f1)
+            
+            kl[kl == np.inf] = 9999
+            kl_reversed[kl_reversed == np.inf] = 9999
         
-            kl_mat[i] = np.sum(kl)
+            kl_mat[i] = np.sum(kl) + np.sum(kl_reversed)
 
-        self.abs_scores = kl_mat.flatten()
+        scores_ = kl_mat.flatten()
+        
+        self.scores_ = scores_ # This is used by the statistical.py fit function. 
+        self.abs_scores = scores_ 
 
     def transform(self, data: pd.DataFrame) -> pd.DataFrame:
 

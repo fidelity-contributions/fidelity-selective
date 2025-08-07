@@ -29,6 +29,7 @@ class TestBenchmark(BaseTest):
         "univ_anova": SelectionMethod.Statistical(num_features, method="anova"),
         "univ_chi_square": SelectionMethod.Statistical(num_features, method="chi_square"),
         "univ_mutual_info": SelectionMethod.Statistical(num_features, method="mutual_info"),
+        "kl_divergence": SelectionMethod.Statistical(num_features, method="kl_divergence"),
         "linear": SelectionMethod.Linear(num_features, regularization="none"),
         "lasso": SelectionMethod.Linear(num_features, regularization="lasso", alpha=alpha),
         "ridge": SelectionMethod.Linear(num_features, regularization="ridge", alpha=alpha),

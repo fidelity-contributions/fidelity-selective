@@ -10,9 +10,11 @@ import numpy as np
 import pandas as pd
 from sklearn.feature_selection import chi2, f_classif, f_regression, mutual_info_classif, mutual_info_regression
 from statsmodels.stats.outliers_influence import variance_inflation_factor
+from scipy.special import rel_entr
 
 from feature.base import _BaseSupervisedSelector, _BaseDispatcher
 from feature.utils import get_selector, Num, get_task_string
+from feature.kl_divergence import _KL_Divergence
 
 
 class _Statistical(_BaseSupervisedSelector, _BaseDispatcher):
@@ -41,7 +43,8 @@ class _Statistical(_BaseSupervisedSelector, _BaseDispatcher):
                         "classification_chi_square": chi2,
                         "classification_mutual_info": partial(mutual_info_classif, random_state=self.seed),
                         # "classification_maximal_info": MINE(), # dropped
-                        "unsupervised_variance_inflation": variance_inflation_factor}
+                        "unsupervised_variance_inflation": variance_inflation_factor, 
+                        "kl_divergence" : _KL_Divergence(num_features = self.num_features, seed = self.seed)}
 
     def get_model_args(self, selection_method) -> Tuple:
 
@@ -56,6 +59,8 @@ class _Statistical(_BaseSupervisedSelector, _BaseDispatcher):
         # Get statistical scoring function
         if method == "variance_inflation":
             score_func = self.factory.get("unsupervised_" + method)
+        elif method == "kl_divergence":
+            score_func = self.factory.get(method)
         else:
             score_func = self.factory.get(get_task_string(labels) + method)
 
@@ -63,6 +68,8 @@ class _Statistical(_BaseSupervisedSelector, _BaseDispatcher):
         if score_func is None:
             raise TypeError(method + " cannot be used for task: " + get_task_string(labels))
         elif method == "variance_inflation": # or isinstance(score_func, MINE) (dropped)
+            self.imp = score_func
+        elif method == "kl_divergence":
             self.imp = score_func
         else:
             # Set sklearn model selector based on scoring function
@@ -82,6 +89,7 @@ class _Statistical(_BaseSupervisedSelector, _BaseDispatcher):
         if self.method == "variance_inflation":
             # VIF is unsupervised, regression between data and each feature
             self.abs_scores = np.array([variance_inflation_factor(data.values, i) for i in range(data.shape[1])])
+
         else:
             # sklearn selector model
             self.imp.fit(X=data, y=labels)

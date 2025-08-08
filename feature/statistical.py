@@ -35,16 +35,17 @@ class _Statistical(_BaseSupervisedSelector, _BaseDispatcher):
         self.imp = None
 
         # Implementor factory
-        self.factory = {"regression_anova": f_regression,
-                        "regression_chi_square": None,
-                        "regression_mutual_info": partial(mutual_info_regression, random_state=self.seed),
-                        # "regression_maximal_info": MINE(), # dropped
-                        "classification_anova": f_classif,
+        self.factory = {"classification_anova": f_classif,
                         "classification_chi_square": chi2,
                         "classification_mutual_info": partial(mutual_info_classif, random_state=self.seed),
                         # "classification_maximal_info": MINE(), # dropped
+                        "kl_divergence" : _KL_Divergence(num_features = self.num_features, seed = self.seed),
+                        "regression_anova": f_regression,
+                        "regression_chi_square": None,
+                        "regression_mutual_info": partial(mutual_info_regression, random_state=self.seed),
+                        # "regression_maximal_info": MINE(), # dropped
                         "unsupervised_variance_inflation": variance_inflation_factor, 
-                        "kl_divergence" : _KL_Divergence(num_features = self.num_features, seed = self.seed)}
+                        }
 
     def get_model_args(self, selection_method) -> Tuple:
 
@@ -57,19 +58,19 @@ class _Statistical(_BaseSupervisedSelector, _BaseDispatcher):
         method = args[0]
 
         # Get statistical scoring function
-        if method == "variance_inflation":
-            score_func = self.factory.get("unsupervised_" + method)
-        elif method == "kl_divergence":
+        if method == "kl_divergence":
             score_func = self.factory.get(method)
+        elif method == "variance_inflation":
+            score_func = self.factory.get("unsupervised_" + method)
         else:
             score_func = self.factory.get(get_task_string(labels) + method)
 
         # Check scoring compatibility with task
         if score_func is None:
             raise TypeError(method + " cannot be used for task: " + get_task_string(labels))
-        elif method == "variance_inflation": # or isinstance(score_func, MINE) (dropped)
-            self.imp = score_func
         elif method == "kl_divergence":
+            self.imp = score_func
+        elif method == "variance_inflation": # or isinstance(score_func, MINE) (dropped)
             self.imp = score_func
         else:
             # Set sklearn model selector based on scoring function

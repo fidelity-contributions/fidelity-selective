@@ -234,7 +234,7 @@ class SelectionMethod(NamedTuple):
             if isinstance(self.num_features, float):
                 check_true(self.num_features <= 1, ValueError("Num features ratio must be between [0..1]."))
             # "maximal_info" dropped
-            check_true(self.method in ["anova", "chi_square", "mutual_info", "variance_inflation", "kl_divergence"],
+            check_true(self.method in ["anova", "chi_square", "kl_divergence", "mutual_info", "variance_inflation"],
                        ValueError("Statistical method can only be anova, chi_square, or mutual_info."))
 
     class TreeBased(NamedTuple):

@@ -22,12 +22,12 @@ class _KL_Divergence(_BaseSupervisedSelector):
 
     def fit(self, X: pd.DataFrame, y: pd.Series) -> NoReturn:
 
-        check_true(len(np.unique(y)) == 2, TypeError("Only binary labels are supported for KL Divergence"))
+        label_categories = np.unique(y)
+        check_true(len(label_categories) == 2, TypeError("Only binary labels are supported for KL Divergence"))
         
         kl_mat = np.zeros((self.num_features, 1))
         X = X.values
-        label_categories = np.unique(y)
-
+        
         class_one_idx = np.where(y == label_categories[0])[0]
         class_two_idx = np.where(y == label_categories[1])[0]
         

@@ -34,9 +34,11 @@ class _KL_Divergence(_BaseSupervisedSelector):
         
         for i in range(input_dimension):
             
+            # Create two distributions, one for the positive label and one for the negative label
             f1 = np.histogram(X[class_one_idx, i], bins = self.num_bins)[0]
             f2 = np.histogram(X[class_two_idx, i], bins = self.num_bins)[0]
-        
+            
+            # Normalize the distributions to be between 0 and 1
             f1 = f1 / np.sum(f1)
             f2 = f2 / np.sum(f2)
         
@@ -44,9 +46,13 @@ class _KL_Divergence(_BaseSupervisedSelector):
             kl = rel_entr(f1, f2)
             kl_reversed = rel_entr(f2, f1)
             
+            # The relative entropy function returns KL(P || Q) = np.inf when P == 0 and Q != 0. 
             kl[kl == np.inf] = 9999
             kl_reversed[kl_reversed == np.inf] = 9999
-        
+            
+            # The final score is the combination of KL divergence in both directions. 
+            # This could possibly be a flag in a future version to determine which direction to apply KL Divergence
+            # in if bidirectional is not desired. 
             kl_mat[i] = np.sum(kl) + np.sum(kl_reversed)
 
         scores_ = kl_mat.flatten()

@@ -24,14 +24,15 @@ class _KL_Divergence(_BaseSupervisedSelector):
 
         label_categories = np.unique(y)
         check_true(len(label_categories) == 2, TypeError("Only binary labels are supported for KL Divergence"))
+        input_dimension = X.shape[1]
         
-        kl_mat = np.zeros((self.num_features, 1))
+        kl_mat = np.zeros((input_dimension, 1))
         X = X.values
         
         class_one_idx = np.where(y == label_categories[0])[0]
         class_two_idx = np.where(y == label_categories[1])[0]
         
-        for i in range(self.num_features):
+        for i in range(input_dimension):
             
             f1 = np.histogram(X[class_one_idx, i], bins = self.num_bins)[0]
             f2 = np.histogram(X[class_two_idx, i], bins = self.num_bins)[0]

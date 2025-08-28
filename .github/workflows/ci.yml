@@ -28,7 +28,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew update
-          brew install libomp
+          brew install libomp cbc
       - name: Check
         shell: bash
         run: |

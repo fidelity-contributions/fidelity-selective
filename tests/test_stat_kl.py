@@ -42,7 +42,7 @@ class TestKL(BaseTest):
 
         # Reduced columns
         self.assertEqual(subset.shape[1], 2)
-        self.assertListEqual(list(subset.columns), ['sepal length (cm)', 'sepal width (cm)'])
+        self.assertListEqual(list(subset.columns), ['sepal length (cm)', 'petal length (cm)'])
 
     def test_kl_classif_top_percentile(self):
         data, label = get_data_label(load_iris())

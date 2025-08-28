@@ -24,7 +24,11 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-
+      - name: Install OpenMP runtime (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install libomp
       - name: Check
         shell: bash
         run: |

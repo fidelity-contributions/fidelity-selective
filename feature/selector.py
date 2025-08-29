@@ -36,7 +36,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 
 __author__ = "FMR LLC"
-__version__ = "1.0.0"
+__version__ = "1.2.0"
 __copyright__ = "Copyright (C), FMR LLC"
 
 
@@ -202,6 +202,13 @@ class SelectionMethod(NamedTuple):
         searching for the optimal binning strategy.
         Note: MIC is dropped from Selective due to inactive MINE library
 
+        The KL Divergence feature importance should only be used with 
+        binary labels. It computes the distribution of a given feature for instances where label == 1 and label == 0.
+        Uses KL divergence between the two distributions as an importance score,
+        where a higher value indicates greater discriminative power of the feature
+        with respect to the binary label. Since KL Divergence is non-symmetric, this method 
+        computer the divergence in both directions and sums them up. 
+
         Notes on Randomness:
             - Mutual Info is non-deterministic, depends on the seed value.
             - The other methods are deterministic
@@ -227,7 +234,7 @@ class SelectionMethod(NamedTuple):
             if isinstance(self.num_features, float):
                 check_true(self.num_features <= 1, ValueError("Num features ratio must be between [0..1]."))
             # "maximal_info" dropped
-            check_true(self.method in ["anova", "chi_square", "mutual_info", "variance_inflation"],
+            check_true(self.method in ["anova", "chi_square", "kl_divergence", "mutual_info", "variance_inflation"],
                        ValueError("Statistical method can only be anova, chi_square, or mutual_info."))
 
     class TreeBased(NamedTuple):

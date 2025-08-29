@@ -10,9 +10,11 @@ import numpy as np
 import pandas as pd
 from sklearn.feature_selection import chi2, f_classif, f_regression, mutual_info_classif, mutual_info_regression
 from statsmodels.stats.outliers_influence import variance_inflation_factor
+from scipy.special import rel_entr
 
 from feature.base import _BaseSupervisedSelector, _BaseDispatcher
 from feature.utils import get_selector, Num, get_task_string
+from feature.kl_divergence import _KL_Divergence
 
 
 class _Statistical(_BaseSupervisedSelector, _BaseDispatcher):
@@ -33,15 +35,17 @@ class _Statistical(_BaseSupervisedSelector, _BaseDispatcher):
         self.imp = None
 
         # Implementor factory
-        self.factory = {"regression_anova": f_regression,
-                        "regression_chi_square": None,
-                        "regression_mutual_info": partial(mutual_info_regression, random_state=self.seed),
-                        # "regression_maximal_info": MINE(), # dropped
-                        "classification_anova": f_classif,
+        self.factory = {"classification_anova": f_classif,
                         "classification_chi_square": chi2,
                         "classification_mutual_info": partial(mutual_info_classif, random_state=self.seed),
                         # "classification_maximal_info": MINE(), # dropped
-                        "unsupervised_variance_inflation": variance_inflation_factor}
+                        "kl_divergence" : _KL_Divergence(num_features = self.num_features, seed = self.seed),
+                        "regression_anova": f_regression,
+                        "regression_chi_square": None,
+                        "regression_mutual_info": partial(mutual_info_regression, random_state=self.seed),
+                        # "regression_maximal_info": MINE(), # dropped
+                        "unsupervised_variance_inflation": variance_inflation_factor, 
+                        }
 
     def get_model_args(self, selection_method) -> Tuple:
 
@@ -54,7 +58,9 @@ class _Statistical(_BaseSupervisedSelector, _BaseDispatcher):
         method = args[0]
 
         # Get statistical scoring function
-        if method == "variance_inflation":
+        if method == "kl_divergence":
+            score_func = self.factory.get(method)
+        elif method == "variance_inflation":
             score_func = self.factory.get("unsupervised_" + method)
         else:
             score_func = self.factory.get(get_task_string(labels) + method)
@@ -62,6 +68,8 @@ class _Statistical(_BaseSupervisedSelector, _BaseDispatcher):
         # Check scoring compatibility with task
         if score_func is None:
             raise TypeError(method + " cannot be used for task: " + get_task_string(labels))
+        elif method == "kl_divergence":
+            self.imp = score_func
         elif method == "variance_inflation": # or isinstance(score_func, MINE) (dropped)
             self.imp = score_func
         else:
@@ -82,6 +90,7 @@ class _Statistical(_BaseSupervisedSelector, _BaseDispatcher):
         if self.method == "variance_inflation":
             # VIF is unsupervised, regression between data and each feature
             self.abs_scores = np.array([variance_inflation_factor(data.values, i) for i in range(data.shape[1])])
+
         else:
             # sklearn selector model
             self.imp.fit(X=data, y=labels)

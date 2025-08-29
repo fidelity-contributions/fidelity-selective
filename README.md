@@ -169,7 +169,7 @@ plot_importance(df)
 
 ## Installation
 
-Selective requires **Python 3.7+** and can be installed from PyPI using ``pip install selective``.
+Selective requires **Python 3.8+** and can be installed from PyPI using ``pip install selective``.
 
 ## Source 
 
